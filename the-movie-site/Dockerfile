@@ -6,7 +6,7 @@
 
 # Want to help us make this template better? Share your feedback here: https://forms.gle/ybq9Krt8jtBL3iCk7
 
-ARG NODE_VERSION=22.12.0
+ARG NODE_VERSION=24.21.0
 
 ################################################################################
 # Use node image for base image for all stages.
@@ -53,20 +53,25 @@ FROM base AS final
 # Use production node environment by default.
 ENV NODE_ENV=production
 
+# Define the port for production.
+ENV PORT=6969
+ENV HOSTNAME="0.0.0.0"
+
 # Run the application as a non-root user.
 USER node
 
 # Copy package.json so that package manager commands can be used.
 COPY package.json .
 
-# Copy the production dependencies from the deps stage and also
-# the built application from the build stage into the image.
-COPY --from=deps /usr/src/app/node_modules ./node_modules
-COPY --from=build /usr/src/app/dist ./dist
+# Copy the standalone server code and dependencies into the root directory
+COPY --from=build --chown=node:node /usr/src/app/.next/standalone ./
 
+# Copy static assets into their proper relative directories
+COPY --from=build --chown=node:node /usr/src/app/public ./public
+COPY --from=build --chown=node:node /usr/src/app/.next/static ./.next/static
 
 # Expose the port that the application listens on.
 EXPOSE 6969
 
-# Run the application.
-CMD ["npm", "start"]
+# Update your launch command to target the root server file
+CMD ["node", "server.js"]
